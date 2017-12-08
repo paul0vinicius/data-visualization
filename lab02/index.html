@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="utf-8">
+  <script src="https://d3js.org/d3.v4.min.js"></script>
+</head>
+
+<body>
+  <div class="container">
+    <div class="row">
+      <h2>E se os burrinhos falassem?</h2>
+    </div>
+    <p>
+      Esses dias eu estava passando pelo Açude Velho, um ponto bastante famoso aqui em Campina Grande,
+      e me deparei com algumas esculturas bem características e que são cartões postais dessa cidade.
+      Eu me pus a pensar, enquanto observava as esculturas, como seria o dia a dia delas, o que elas
+      viam todos os dias e qual seria a impressão da cidade, movimentação de pessoas e sua diversidade.
+    </p>
+    <p>
+      Se os burrinhos pudessem falar, qual história eles nos contariam?
+    </p>
+    <h2>
+      Quais são os horários de pico em cada localização?
+    </h2>
+    <h2>
+      Quem domina a pista? Carros ou motos?
+    </h2>
+    <h2>
+      Qual o local mais popular?
+    </h2>
+    <h2>
+      Há uma diferença numérica entre homens e mulheres na rua?
+    </h2>
+    <div class="row mychart" id="chart">
+    </div>
+    <div>
+      
+    </div>
+  </div>
+
+  <style>
+    .mychart rect {
+      fill: steelblue;
+    }
+
+    .mychart rect:hover {
+      fill: goldenrod;
+    }
+
+    .mychart text {
+      font: 12px sans-serif;
+      text-anchor: left;
+    }
+  </style>
+
+  <script type="text/javascript">
+    "use strict"
+
+    function desenhaBarras(dados) {
+      // definicoes de altura e largura do svg e da vis dentro
+      var alturaSVG = 400, larguraSVG = 600;
+      var	margin = {top: 10, right: 20, bottom:30, left: 45}, // para descolar a vis das bordas do grafico
+          larguraVis = larguraSVG - margin.left - margin.right,
+          alturaVis = alturaSVG - margin.top - margin.bottom;
+
+          //console.log(dados.horario_inicial);
+
+      /*
+       * Prepara onde adicionaremos a visualizacao
+       */
+      var grafico = d3.select('#chart') // cria elemento <svg> com um <g> dentro
+        .append('svg')
+          .attr('width', larguraVis + margin.left + margin.right)
+          .attr('height', alturaVis + margin.top + margin.bottom)
+        .append('g') // para entender o <g> vá em x03-detalhes-svg.html
+          .attr('transform', 'translate(' +  margin.left + ',' + margin.top + ')');
+
+      // === EDITE DAQUI ===
+      /*
+       * As escalas
+       */
+
+      // Configure essa escala com domain, range e padding
+      var x = d3.scaleTime()
+                .domain(d3.extent(dados, function(d) { return d.horario_final; }))
+                .nice(d3.timeDay, 1)
+                .rangeRound([0,larguraVis]);
+
+      // Configure essa escala com domain e range
+      // Lembre que uma escala pode converter de 1..10 -> 100..1
+      var y = d3.scaleLinear()
+                .domain([0, 1500])
+                .rangeRound([alturaVis, 0]);
+
+      var xAxis = d3.axisBottom(x)
+        .ticks(d3.timeHour.every(2))
+        .tickFormat(d3.timeFormat('%H:%M'))
+        .tickSize(0)
+        .tickPadding(8);;
+
+      // === ATÉ DAQUI ===
+
+      /*
+       * As marcas
+       */
+      grafico.selectAll('g')
+              .data(dados)
+              .enter()
+                .append('circle')
+                  .attr('cx', d => x(d.horario_final))   // usando a escala definida acima
+                  .attr('r', d => 5) // largura da barra via escala
+                  .attr('cy', d => y(d.total_motorizados))
+      /*
+       * Os eixos
+       */
+      grafico.append("g")
+              .attr("class", "x axis")
+              .attr("transform", "translate(0," + alturaVis + ")")
+              .call(xAxis); // magica do d3: gera eixo a partir da escala
+
+      grafico.append('g')
+              .attr('transform', 'translate(0,0)')
+              .call(d3.axisLeft(y))  // gera eixo a partir da escala
+
+      grafico.append("text")
+        .attr("transform", "translate(-30," + (alturaVis + margin.top)/2 + ") rotate(-90)")
+        .text("Quantidade de carros e motos");
+
+
+      grafico.append("text")
+        .attr("transform", "translate(" +(larguraVis + margin.top)/2 + "," + (alturaVis + margin.bottom)  + ")")
+        .text("Horário");
+    }
+
+      d3.csv('https://raw.githubusercontent.com/luizaugustomm/pessoas-no-acude/master/dados/processados/dados.csv', function(dados) {
+
+        /*
+          Converte horário
+          Referência: https://stackoverflow.com/questions/28684566/d3-js-bar-chart-with-24-hour-x-axis
+        */
+        var today = new Date();
+        today.setHours(0, 0, 0, 0);
+        var todayMillis = today.getTime();
+
+        dados.forEach(function(d) {
+          var parts = d.horario_final.split(/:/);
+          var timePeriodMillis = (parseInt(parts[0], 10) * 60 * 60 * 1000) +
+            (parseInt(parts[1], 10) * 60 * 1000);
+
+          d.horario_final = new Date();
+          d.horario_final.setTime(todayMillis + timePeriodMillis);
+          });
+
+        console.log(dados[1].horario_final);
+
+        desenhaBarras(dados);
+    });
+
+    /*
+    * Assim como a função d3.tsv, existe a d3.csv e a d3.json
+    * Em todas, o primeiro parâmetro é uma URL e o segundo a função que
+    * será executada quando o dado for obtido.
+    * >>>>> A chamada ao d3.tsv é assíncrona <<<<<<
+    */
+  </script>
+</body>
+
+</html>
